@@ -7,4 +7,4 @@ __Requirements__:
 [EVEoj static JSON](https://eve-oj.com/#downloads)
 
 __Setup__:  
-Put a copy of the EVEoj static JSON files in a folder named `staticevedata` in your `thera-trip-check` folder (in the same directory as `thera-trip-check.js`)
+Put a copy of the EVEoj static JSON data folder in a folder named `staticevedata` in your `thera-trip-check` folder (in the same directory as `thera-trip-check.js`)

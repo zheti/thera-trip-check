@@ -1,16 +1,17 @@
 if (process.argv.length < 3) {
   // TODO: system avoidance
-  console.log('usage: theraMarketCheck.js [start system]')
+  console.log('usage: theraTripCheck.js [start system]')
   process.exit(1);
 }
 
-const start = process.argv[2];
-console.log('theraMarketCheck: running check for system ' + start);
+const start = process.argv[2].toUpperCase();
+console.log('theraTripCheck: running check for system ' + start);
 
 const hubs = ["Jita", "Amarr", "Dodixie"];
 
 const EVEoj = require("EVEoj");
-var SDD = EVEoj.SDD.Create("json", {path: "D:/Documents/staticevedata"});
+// var SDD = EVEoj.SDD.Create("json", {path: "D:/Documents/staticevedata"});
+var SDD = EVEoj.SDD.Create("json", {path: "staticevedata"});
 var map;
 SDD.LoadMeta().then(function() {
   map = EVEoj.map.Create(SDD, "K");
@@ -93,7 +94,8 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
 
       // console.log("http://eve-gatecheck.space/eve/#" + theraConnection.name + ":" + hub + ":shortest");
     }
-    console.log("shortestPreThera: " + shortestPreThera + " shortestPostThera: " + shortestPostThera)
+    // console.log("shortestPreThera: " + shortestPreThera + " shortestPostThera: " + shortestPostThera)
+    console.log("shortest route length via Thera: " + (shortestPreThera + shortestPostThera) + " jumps");
 
     console.log("closest Thera connection to " + hub + ": " + closestPreThera.name + ", " + shortestPostThera + " jumps");
     // TODO: wormhole info (sigs, EOL, size, etc)

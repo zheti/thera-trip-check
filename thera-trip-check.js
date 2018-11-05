@@ -1,6 +1,7 @@
 if (process.argv.length < 3) {
   // TODO: system avoidance
-  // TODO: choice of checking hubs or input
+  // TODO: choice of checking hubs or input system
+  // TODO: debug mode
   console.log('usage: theraTripCheck.js [start system]')
   process.exit(1);
 }
@@ -25,15 +26,17 @@ SDD.LoadMeta().then(function() {
 
 const http = require('http');
 const https = require('https');
+// const async = require('async');
 
-const hubs = ["Jita", "Amarr", "Dodixie"];
+const theraSystem = {ID: 31000005, name: 'Thera'} // Object representing Thera
+const hubs = ["Jita", "Amarr", "Dodixie"]; // list of trade hubs
+
 const req = https.get('https://www.eve-scout.com/api/wormholes', (res) => {
   // console.log(`STATUS: ${res.statusCode}`);
   // console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
   res.setEncoding('utf8');
 
   var evescoutjson = '';
-  // console.log("start json " + evescoutjson)
   res.on('data', (chunk) => {
     evescoutjson += chunk;
   });
@@ -53,27 +56,27 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
 
   // calc shortest path from start to thera
   var minjumps = Infinity;
-  var closestConnection;
+  var closestPreConnection;
   var shortestPreRoute;
   for (var entry of theraholes) {
     var theraConnection = entry.destinationSolarSystem;
 
     var route = map.Route(startSystem.ID, theraConnection.id, [], false, false);
     // console.log(theraConnection.name + " " + theraConnection.id);
-    console.log(theraConnection.name + " " /*+ theraConnection.id*/ + ": " + route.length)
+    // console.log(theraConnection.name + " " /*+ theraConnection.id*/ + ": " + route.length)
     if (route.length < minjumps && (route != 0 || startSystem.ID == theraConnection.id)) {
       minjumps = route.length;
-      closestConnection = theraConnection;
+      closestPreConnection = theraConnection;
       shortestPreRoute = route;
     }
 
     // console.log("http://eve-gatecheck.space/eve/#" + startSystem.name + ":" + theraConnection.name + ":shortest");
   }
-  console.log("closest Thera connection to start: " + closestConnection.name + ", " + shortestPreRoute.length + " jumps");
+  console.log("closest Thera connection to start: " + closestPreConnection.name + ", " + shortestPreRoute.length + " jumps");
   // TODO: wormhole info (sigs, EOL, size, etc)
 
   // calc shortest path from thera to each of the hubs
-  for (var hub of hubs) {
+  hubs.forEach((hub) => {
     console.log("checking route to " + hub)
     var hubSystem = map.GetSystem({name: hub});
 
@@ -84,21 +87,21 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
       // TODO: do i really want to continue? what if thera route slightly longer but much safer?
       // TODO: provide comparison betw routes (more details)
 
-      continue;
+      // continue;
     }
 
     var minjumps = Infinity;
-    var closestConnection;
+    var closestPostConnection;
     var shortestPostRoute;
     for (var entry of theraholes) {
       var theraConnection = entry.destinationSolarSystem;
       // console.log(theraConnection);
 
       var route = map.Route(theraConnection.id, hubSystem.ID, [], false, false);
-      console.log(theraConnection.name + " " /*+ theraConnection.id*/ + ": " + route.length)
+      // console.log(theraConnection.name + " " /*+ theraConnection.id*/ + ": " + route.length)
       if (route.length < minjumps && (route.length != 0 || theraConnection.id == hubSystem.ID)) {
         minjumps = route.length;
-        closestConnection = theraConnection;
+        closestPostConnection = theraConnection;
         shortestPostRoute = route;
       }
 
@@ -107,7 +110,7 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
     // console.log("shortest jumps pre-Thera: " + shortestPreRoute.length + " shortest jumps post-Thera: " + shortestPostRoute.length)
     console.log("shortest route length via Thera: " + (shortestPreRoute.length + shortestPostRoute.length) + " jumps");
 
-    console.log("closest Thera connection to " + hub + ": " + closestConnection.name + ", " + shortestPostRoute.length + " jumps");
+    console.log("closest Thera connection to " + hub + ": " + closestPostConnection.name + ", " + shortestPostRoute.length + " jumps");
     // TODO: wormhole info (sigs, EOL, size, etc)
 
     if (shortestPreRoute.length + 2 + shortestPostRoute.length >= shortestKSpaceRoute.length) {
@@ -117,23 +120,130 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
 
     }
 
+    var composedRoute = [{
+      id: startSystem.ID,
+      name: start,
+      kills: []
+    }];
+    shortestPreRoute.forEach((systemid) => {
+      composedRoute.push({
+        id: systemid,
+        name: map.GetSystem({id: systemid}).name,
+        kills: []
+      });
+    });
+    composedRoute.push({
+      id: theraSystem.ID,
+      name: theraSystem.name,
+      kills: []
+    });
+    composedRoute.push({
+      id: closestPostConnection.id,
+      name: closestPostConnection.name,
+      kills: []
+    });
+    shortestPostRoute.forEach((systemid) => {
+      composedRoute.push({
+        id: systemid,
+        name: map.GetSystem({id: systemid}).name,
+        kills: []
+      });
+    });
+    // console.log(composedRoute)
+
     // print out systems along route
-    console.log("suggested route from " + start + " to " + hub)
-    for (var systemid of shortestPreRoute) {
-      console.log(map.GetSystem({id: systemid}).name);
-    }
-    console.log("Thera"); // TODO: add entrance/exit wormhole info before/after
-    for (var systemid of shortestPostRoute) {
-      console.log(map.GetSystem({id: systemid}).name);
-    }
-  }
+    console.log("suggested Thera route from " + start + " to " + hub)
+
+    // in future?
+    // map id to info
+
+    // reduce on info
+    // kills on route
+    // hs, ls, ns systems
+    // regions
+
+    var completed_requests = 0;
+    var totalkills = 0;
+    composedRoute.forEach((obj) => {
+      // var systemname = (systemid == theraSystem.ID) ? theraSystem.name : map.GetSystem({id: systemid}).name;
+      console.log(obj.name);
+      // async(checkZKill(systemid));
+
+    });
+
+    composedRoute.forEach((obj) => {
+      // get kills for given system within the past hour
+      const req = https.get('https://www.zkillboard.com/api/kills/solarSystemID/' +
+        obj.id + '/pastSeconds/3600/',
+        (res) => {
+        // console.log(`STATUS: ${res.statusCode}`);
+        // console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
+        res.setEncoding('utf8');
+
+        var zkilljson = '';
+        // console.log("start json " + evescoutjson)
+        res.on('data', (chunk) => {
+          zkilljson += chunk;
+        });
+        res.on('end', () => {
+          obj.kills = JSON.parse(zkilljson); // TODO: more kill info later
+          // console.log("json for " + map.GetSystem({id: systemid}).name + ": " + zkilljson)
+          
+          // var killsInLastHr = kills.length;
+          totalkills += obj.kills.length;
+          // console.log(killsInLastHr + ' kills in last hour in ' + systemname)
+          completed_requests++;
+          if (completed_requests == composedRoute.length) {
+            console.log('all requests done')
+            console.log(totalkills + ' total kills on ' + hub + ' route in last hour')
+          }
+        });
+      });
+    });
+
+
+    // for (var systemid of shortestPreRoute) {
+    //   console.log(map.GetSystem({id: systemid}).name);
+    //   checkZKill(systemid);
+    // }
+
+    // console.log("Thera"); // TODO: add entrance/exit wormhole info before/after
+    
+      // console.log(map.GetSystem({id: systemid}).name);
+      // checkZKill(systemid);
+    // for (var systemid of shortestPostRoute) {
+    //   console.log(map.GetSystem({id: systemid}).name);
+    //   checkZKill(systemid);
+    // }
+
+  });
 
 }
 
 // TODO: zkill checks here.
 // TODO: check starting system and thera too
-function checkZKill(system) {
-  //
+function checkZKill(systemid) {
+  // TODO: get kills for more time intervals (eg last n hrs, last weekend for a start)
+
+  // get kills for given system within the past hour
+  const req = https.get('https://www.zkillboard.com/api/kills/solarSystemID/' + systemid + 'pastSeconds/3600', (res) => {
+    // console.log(`STATUS: ${res.statusCode}`);
+    // console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
+    res.setEncoding('utf8');
+
+    var zkilljson = '';
+    // console.log("start json " + evescoutjson)
+    res.on('data', (chunk) => {
+      zkilljson += chunk;
+    });
+    res.on('end', () => {
+      // routeStuff(evescoutjson);
+      var killsInLastHr = zkilljson.length;
+      console.log(killsInLastHr + ' kills in last hour')
+    }
+      // getJumps(evescoutjson) // TODO; why doesn't this work?
+    );
+  });
 }
 
 // to play with routes

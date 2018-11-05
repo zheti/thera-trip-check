@@ -76,7 +76,7 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
   // TODO: wormhole info (sigs, EOL, size, etc)
 
   // calc shortest path from thera to each of the hubs
-  for (var hub of hubs) {
+  hubs.forEach((hub) => {
     console.log("checking route to " + hub)
     var hubSystem = map.GetSystem({name: hub});
 
@@ -87,7 +87,7 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
       // TODO: do i really want to continue? what if thera route slightly longer but much safer?
       // TODO: provide comparison betw routes (more details)
 
-      continue;
+      // continue;
     }
 
     var minjumps = Infinity;
@@ -216,7 +216,7 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
     //   checkZKill(systemid);
     // }
 
-  }
+  });
 
 }
 

@@ -63,7 +63,7 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
 
     var route = map.Route(startSystem.ID, theraConnection.id, [], false, false);
     // console.log(theraConnection.name + " " + theraConnection.id);
-    console.log(theraConnection.name + " " /*+ theraConnection.id*/ + ": " + route.length)
+    // console.log(theraConnection.name + " " /*+ theraConnection.id*/ + ": " + route.length)
     if (route.length < minjumps && (route != 0 || startSystem.ID == theraConnection.id)) {
       minjumps = route.length;
       closestPreConnection = theraConnection;
@@ -98,7 +98,7 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
       // console.log(theraConnection);
 
       var route = map.Route(theraConnection.id, hubSystem.ID, [], false, false);
-      console.log(theraConnection.name + " " /*+ theraConnection.id*/ + ": " + route.length)
+      // console.log(theraConnection.name + " " /*+ theraConnection.id*/ + ": " + route.length)
       if (route.length < minjumps && (route.length != 0 || theraConnection.id == hubSystem.ID)) {
         minjumps = route.length;
         closestPostConnection = theraConnection;
@@ -128,7 +128,7 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
     // console.log(composedRoute)
 
     // print out systems along route
-    console.log("suggested route from " + start + " to " + hub)
+    console.log("suggested Thera route from " + start + " to " + hub)
 
     // in future?
     // map id to info
@@ -165,10 +165,10 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
           // console.log("json for " + map.GetSystem({id: systemid}).name + ": " + zkilljson)
           // routeStuff(evescoutjson);
           var killsInLastHr = kills.length;
-          console.log(killsInLastHr + ' kills in last hour in ' + systemname)
+          // console.log(killsInLastHr + ' kills in last hour in ' + systemname)
           if (completed_requests++ == route.length) {
             console.log('all requests done')
-            console.log(totalkills + ' total kills on route in last hour')
+            console.log(totalkills + ' total kills on ' + hub + ' route in last hour')
           }
         });
       });

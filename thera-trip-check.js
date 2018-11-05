@@ -26,7 +26,6 @@ SDD.LoadMeta().then(function() {
 
 const http = require('http');
 const https = require('https');
-// const async = require('async');
 
 const theraSystem = {ID: 31000005, name: 'Thera'} // Object representing Thera
 const hubs = ["Jita", "Amarr", "Dodixie"]; // list of trade hubs
@@ -84,10 +83,7 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
     if (shortestPreRoute.length + 2 >= shortestKSpaceRoute) {
       console.log("shortest route including Thera longer than shortest k-space route to " + hub);
       
-      // TODO: do i really want to continue? what if thera route slightly longer but much safer?
       // TODO: provide comparison betw routes (more details)
-
-      // continue;
     }
 
     var minjumps = Infinity;

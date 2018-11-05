@@ -120,11 +120,35 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
 
     }
 
-    var composedRoute = [startSystem.ID];
-    Array.prototype.push.apply(composedRoute, shortestPreRoute);
-    composedRoute.push(theraSystem.ID);
-    composedRoute.push(closestPostConnection.id);
-    Array.prototype.push.apply(composedRoute, shortestPostRoute);
+    var composedRoute = [{
+      id: startSystem.ID,
+      name: start,
+      kills: []
+    }];
+    shortestPreRoute.forEach((systemid) => {
+      composedRoute.push({
+        id: systemid,
+        name: map.GetSystem({id: systemid}).name,
+        kills: []
+      });
+    });
+    composedRoute.push({
+      id: theraSystem.ID,
+      name: theraSystem.name,
+      kills: []
+    });
+    composedRoute.push({
+      id: closestPostConnection.id,
+      name: closestPostConnection.name,
+      kills: []
+    });
+    shortestPostRoute.forEach((systemid) => {
+      composedRoute.push({
+        id: systemid,
+        name: map.GetSystem({id: systemid}).name,
+        kills: []
+      });
+    });
     // console.log(composedRoute)
 
     // print out systems along route
@@ -140,14 +164,17 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
 
     var completed_requests = 0;
     var totalkills = 0;
-    composedRoute.forEach((systemid) => {
-      var systemname = (systemid == theraSystem.ID) ? theraSystem.name : map.GetSystem({id: systemid}).name;
-      console.log(systemname);
+    composedRoute.forEach((obj) => {
+      // var systemname = (systemid == theraSystem.ID) ? theraSystem.name : map.GetSystem({id: systemid}).name;
+      console.log(obj.name);
       // async(checkZKill(systemid));
 
+    });
+
+    composedRoute.forEach((obj) => {
       // get kills for given system within the past hour
       const req = https.get('https://www.zkillboard.com/api/kills/solarSystemID/' +
-        systemid + '/pastSeconds/3600/',
+        obj.id + '/pastSeconds/3600/',
         (res) => {
         // console.log(`STATUS: ${res.statusCode}`);
         // console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
@@ -159,21 +186,21 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
           zkilljson += chunk;
         });
         res.on('end', () => {
-          completed_requests++;
-          // if (completed_requests == shortestPreRoute.length - 1)
-          var kills = JSON.parse(zkilljson);
+          obj.kills = JSON.parse(zkilljson); // TODO: more kill info later
           // console.log("json for " + map.GetSystem({id: systemid}).name + ": " + zkilljson)
-          // routeStuff(evescoutjson);
-          var killsInLastHr = kills.length;
+          
+          // var killsInLastHr = kills.length;
+          totalkills += obj.kills.length;
           // console.log(killsInLastHr + ' kills in last hour in ' + systemname)
-          if (completed_requests++ == route.length) {
+          completed_requests++;
+          if (completed_requests == composedRoute.length) {
             console.log('all requests done')
             console.log(totalkills + ' total kills on ' + hub + ' route in last hour')
           }
         });
       });
-
     });
+
 
     // for (var systemid of shortestPreRoute) {
     //   console.log(map.GetSystem({id: systemid}).name);
@@ -188,6 +215,7 @@ function getJumps(evescoutjson) { // TODO: jump off-by-1 because of thera jump
     //   console.log(map.GetSystem({id: systemid}).name);
     //   checkZKill(systemid);
     // }
+
   }
 
 }

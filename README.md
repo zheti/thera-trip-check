@@ -10,4 +10,4 @@ __Setup__:
 Put a copy of the EVEoj static JSON data folder in a folder named `staticevedata` in your `thera-trip-check` folder (in the same directory as `thera-trip-check.js`)
 
 __Usage__:  
-theraTripCheck.js [start system name]
+node theraTripCheck.js [start system name]

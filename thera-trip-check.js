@@ -81,7 +81,7 @@ function getJumps(evescoutjson) {
       }
     }
     console.log('closest Thera connection to ' + hub + ': ' + closestPostConnection.name + ', ' + shortestPostRoute.length + ' jumps');
-    console.log('shortest route length via Thera: ' + (shortestPreRoute.length + 2 + shortestPostRoute.length) + ' jumps');
+    console.log('shortest route length via Thera to ' + hub + ': ' + (shortestPreRoute.length + 2 + shortestPostRoute.length) + ' jumps');
 
     var composedRoute = [{
       id: startSystem.ID,
@@ -114,35 +114,41 @@ function getJumps(evescoutjson) {
     });
 
     // print out systems along route
-    console.log('suggested Thera route from ' + start + ' to ' + hub +
-      ': ' + (composedRoute.length - 1) + ' jumps')
+/*    console.log('suggested Thera route from ' + start + ' to ' + hub +
+': ' + (composedRoute.length - 1) + ' jumps')*/
 
     var completed_requests = 0;
     var totalkills = 0;
-    composedRoute.forEach((obj) => {
+    /*composedRoute.forEach((obj) => {
       console.log(obj.name);
-    });
+    });*/
 
     composedRoute.forEach((obj) => {
       // get kills for given system within the past hour
       const req = https.get('https://www.zkillboard.com/api/kills/solarSystemID/' +
         obj.id + '/pastSeconds/3600/',
         (res) => {
-        res.setEncoding('utf8');
+          res.setEncoding('utf8');
 
-        var zkilljson = '';
-        res.on('data', (chunk) => {
-          zkilljson += chunk;
+          var zkilljson = '';
+          res.on('data', (chunk) => {
+            zkilljson += chunk;
+          });
+          res.on('end', () => {
+            obj.kills = JSON.parse(zkilljson);
+            totalkills += obj.kills.length;
+            completed_requests++;
+            if (completed_requests == composedRoute.length) {
+              console.log('suggested Thera route from ' + start + ' to ' + hub +
+                ': ' + (composedRoute.length - 1) + ' jumps | ' + totalkills + ' total kills in last hour')
+              composedRoute.forEach((obj) => {
+                // if (obj.kills.length < 1)
+                console.log((obj.kills.length < 1) ? obj.name : (obj.name + ' | ' + obj.kills.length + ' kills in last hour'));
+              });
+              // console.log(totalkills + ' total kills on ' + hub + ' route in last hour')
+            }
+          });
         });
-        res.on('end', () => {
-          obj.kills = JSON.parse(zkilljson);
-          totalkills += obj.kills.length;
-          completed_requests++;
-          if (completed_requests == composedRoute.length) {
-            console.log(totalkills + ' total kills on ' + hub + ' route in last hour')
-          }
-        });
-      });
     });
   });
 }

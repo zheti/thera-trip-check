@@ -57,11 +57,11 @@ function getJumps(evescoutjson) {
       shortestPreRoute = route;
     }
   }
-  console.log('closest Thera connection to start: ' + closestPreConnection.name + ', ' + shortestPreRoute.length + ' jumps');
+  console.log('\nclosest Thera connection to start: ' + closestPreConnection.name + ' | jumps: ' + shortestPreRoute.length);
 
   // calc shortest path from thera to each of the hubs
   hubs.forEach((hub) => {
-    console.log('checking route to ' + hub)
+    console.log('\nchecking route to ' + hub)
     var hubSystem = map.GetSystem({name: hub});
 
     var shortestKSpaceRoute = map.Route(startSystem.ID, hubSystem.ID, [], false, false);
@@ -80,7 +80,7 @@ function getJumps(evescoutjson) {
         shortestPostRoute = route;
       }
     }
-    console.log('closest Thera connection to ' + hub + ': ' + closestPostConnection.name + ', ' + shortestPostRoute.length + ' jumps');
+    console.log('closest Thera connection to ' + hub + ': ' + closestPostConnection.name + ' | jumps: ' + shortestPostRoute.length);
     console.log('shortest route length via Thera to ' + hub + ': ' + (shortestPreRoute.length + 2 + shortestPostRoute.length) + ' jumps');
 
     var composedRoute = [{
@@ -113,15 +113,8 @@ function getJumps(evescoutjson) {
       });
     });
 
-    // print out systems along route
-/*    console.log('suggested Thera route from ' + start + ' to ' + hub +
-': ' + (composedRoute.length - 1) + ' jumps')*/
-
     var completed_requests = 0;
     var totalkills = 0;
-    /*composedRoute.forEach((obj) => {
-      console.log(obj.name);
-    });*/
 
     composedRoute.forEach((obj) => {
       // get kills for given system within the past hour
@@ -139,13 +132,12 @@ function getJumps(evescoutjson) {
             totalkills += obj.kills.length;
             completed_requests++;
             if (completed_requests == composedRoute.length) {
-              console.log('suggested Thera route from ' + start + ' to ' + hub +
-                ': ' + (composedRoute.length - 1) + ' jumps | ' + totalkills + ' total kills in last hour')
+              console.log('\nsuggested Thera route from ' + start + ' to ' + hub +
+                ': ' + (composedRoute.length - 1) + ' jumps | total kills in last hour: ' + totalkills)
               composedRoute.forEach((obj) => {
-                // if (obj.kills.length < 1)
-                console.log((obj.kills.length < 1) ? obj.name : (obj.name + ' | ' + obj.kills.length + ' kills in last hour'));
+                console.log((obj.kills.length < 1) ? obj.name :
+                  (obj.name + ' | kills: ' + obj.kills.length));
               });
-              // console.log(totalkills + ' total kills on ' + hub + ' route in last hour')
             }
           });
         });

@@ -1,11 +1,12 @@
 if (process.argv.length < 3) {
-  console.log('usage: theraTripCheck.js [start system]')
+  console.log('usage: theraTripCheck.js <start system> [end system] [end system] [end system]')
   process.exit(1);
 }
 
-const start = process.argv[2].toUpperCase();
-console.log('thera-trip-check: running check for system ' + start);
+const start = formatSystem(process.argv[2]);
 var startSystem;
+var destos = [];
+const marketHubs = ['Jita', 'Amarr', 'Dodixie']; // list of trade hubs
 
 const EVEoj = require('EVEoj');
 var SDD = EVEoj.SDD.Create('json', {path: 'staticevedata'});
@@ -13,19 +14,34 @@ var map;
 SDD.LoadMeta().then(function() {
   map = EVEoj.map.Create(SDD, 'K');
   return map.Load();
-}).then(function() { // handle bogus system name
+}).then(function() { // handle bogus system names
   startSystem = map.GetSystem({name: start});
   if (startSystem == null) {
     console.log('error: ' + start + ' is not a recognized system.');
     process.exit(1);
   }
+
+  if (process.argv.length > 3) {
+    var end = Math.min(process.argv.length, 6); // limited to 3 desto systems because of performance
+    for (var i = 3; i < end; i++) {
+      var curr = formatSystem(process.argv[i]);
+      var currSystem = map.GetSystem({name: curr});
+      if (currSystem == null) {
+        console.log('error: ' + curr + ' is not a recognized system.');
+        process.exit(1);
+      }
+      destos.push(curr);
+    }
+  } else {
+    destos = marketHubs;
+  }
+  console.log('thera-trip-check: running check for system ' + start);
 });
 
 const http = require('http');
 const https = require('https');
 
 const theraSystem = {ID: 31000005, name: 'Thera'} // Object representing Thera (for code readability)
-const hubs = ['Jita', 'Amarr', 'Dodixie']; // list of trade hubs
 
 const req = https.get('https://www.eve-scout.com/api/wormholes', (res) => {
   res.setEncoding('utf8');
@@ -59,13 +75,13 @@ function getJumps(evescoutjson) {
   }
   console.log('\nclosest Thera connection to start: ' + closestPreConnection.name + ' | jumps: ' + shortestPreRoute.length);
 
-  // calc shortest path from thera to each of the hubs
-  hubs.forEach((hub) => {
-    console.log('\nchecking route to ' + hub)
-    var hubSystem = map.GetSystem({name: hub});
+  // calc shortest path from thera to each of the destos
+  destos.forEach((desto) => {
+    console.log('\nchecking route to ' + desto)
+    var destoSystem = map.GetSystem({name: desto});
 
-    var shortestKSpaceRoute = map.Route(startSystem.ID, hubSystem.ID, [], false, false);
-    console.log('shortest k-space route to ' + hub + ': ' + shortestKSpaceRoute.length + ' jumps');
+    var shortestKSpaceRoute = map.Route(startSystem.ID, destoSystem.ID, [], false, false);
+    console.log('shortest k-space route to ' + desto + ': ' + shortestKSpaceRoute.length + ' jumps');
 
     var minjumps = Infinity;
     var closestPostConnection;
@@ -73,15 +89,15 @@ function getJumps(evescoutjson) {
     for (var entry of theraholes) {
       var theraConnection = entry.destinationSolarSystem;
 
-      var route = map.Route(theraConnection.id, hubSystem.ID, [], false, false);
-      if (route.length < minjumps && (route.length != 0 || theraConnection.id == hubSystem.ID)) {
+      var route = map.Route(theraConnection.id, destoSystem.ID, [], false, false);
+      if (route.length < minjumps && (route.length != 0 || theraConnection.id == destoSystem.ID)) {
         minjumps = route.length;
         closestPostConnection = theraConnection;
         shortestPostRoute = route;
       }
     }
-    console.log('closest Thera connection to ' + hub + ': ' + closestPostConnection.name + ' | jumps: ' + shortestPostRoute.length);
-    console.log('shortest route length via Thera to ' + hub + ': ' + (shortestPreRoute.length + 2 + shortestPostRoute.length) + ' jumps');
+    console.log('closest Thera connection to ' + desto + ': ' + closestPostConnection.name + ' | jumps: ' + shortestPostRoute.length);
+    console.log('shortest route length via Thera to ' + desto + ': ' + (shortestPreRoute.length + 2 + shortestPostRoute.length) + ' jumps');
 
     var composedRoute = [{
       id: startSystem.ID,
@@ -115,7 +131,6 @@ function getJumps(evescoutjson) {
 
     var completed_requests = 0;
     var totalkills = 0;
-
     composedRoute.forEach((obj) => {
       // get kills for given system within the past hour
       const req = https.get('https://www.zkillboard.com/api/kills/solarSystemID/' +
@@ -132,7 +147,7 @@ function getJumps(evescoutjson) {
             totalkills += obj.kills.length;
             completed_requests++;
             if (completed_requests == composedRoute.length) {
-              console.log('\nsuggested Thera route from ' + start + ' to ' + hub +
+              console.log('\nsuggested Thera route from ' + start + ' to ' + desto +
                 ': ' + (composedRoute.length - 1) + ' jumps | total kills in last hour: ' + totalkills)
               composedRoute.forEach((obj) => {
                 console.log((obj.kills.length < 1) ? obj.name :
@@ -143,4 +158,11 @@ function getJumps(evescoutjson) {
         });
     });
   });
+}
+
+function formatSystem(name) {
+  if (name.indexOf('-') > -1 || /\d/.test(name)) { // nullsec-ish
+    return name.toUpperCase();
+  }
+  return name[0].toUpperCase() + name.slice(1);
 }

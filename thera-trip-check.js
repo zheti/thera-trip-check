@@ -1,5 +1,5 @@
 if (process.argv.length < 3) {
-  console.log('usage: theraTripCheck.js <start system> [end system] [end system] [end system]')
+  console.log('usage: node theraTripCheck.js <start system> [end system] [end system] [end system]')
   process.exit(1);
 }
 
@@ -61,7 +61,7 @@ function getJumps(evescoutjson) {
 
   // calc shortest path from start to thera
   var minjumps = Infinity;
-  var closestPreConnection;
+  var closestEntryInfo;
   var shortestPreRoute;
   for (var entry of theraholes) {
     var theraConnection = entry.destinationSolarSystem;
@@ -69,11 +69,11 @@ function getJumps(evescoutjson) {
     var route = map.Route(startSystem.ID, theraConnection.id, [], false, false);
     if (route.length < minjumps && (route != 0 || startSystem.ID == theraConnection.id)) {
       minjumps = route.length;
-      closestPreConnection = theraConnection;
+      closestEntryInfo = entry;
       shortestPreRoute = route;
     }
   }
-  console.log('\nclosest Thera connection to start: ' + closestPreConnection.name + ' | jumps: ' + shortestPreRoute.length);
+  console.log('\nclosest Thera connection to start: ' + closestEntryInfo.destinationSolarSystem.name + ' | jumps: ' + shortestPreRoute.length);
 
   // calc shortest path from thera to each of the destos
   destos.forEach((desto) => {
@@ -84,7 +84,7 @@ function getJumps(evescoutjson) {
     console.log('shortest k-space route to ' + desto + ': ' + shortestKSpaceRoute.length + ' jumps');
 
     var minjumps = Infinity;
-    var closestPostConnection;
+    var closestExitInfo;
     var shortestPostRoute;
     for (var entry of theraholes) {
       var theraConnection = entry.destinationSolarSystem;
@@ -92,40 +92,48 @@ function getJumps(evescoutjson) {
       var route = map.Route(theraConnection.id, destoSystem.ID, [], false, false);
       if (route.length < minjumps && (route.length != 0 || theraConnection.id == destoSystem.ID)) {
         minjumps = route.length;
-        closestPostConnection = theraConnection;
+        closestExitInfo = entry;
         shortestPostRoute = route;
       }
     }
-    console.log('closest Thera connection to ' + desto + ': ' + closestPostConnection.name + ' | jumps: ' + shortestPostRoute.length);
+    console.log('closest Thera connection to ' + desto + ': ' + closestExitInfo.destinationSolarSystem.name + ' | jumps: ' + shortestPostRoute.length);
     console.log('shortest route length via Thera to ' + desto + ': ' + (shortestPreRoute.length + 2 + shortestPostRoute.length) + ' jumps');
 
     var composedRoute = [{
       id: startSystem.ID,
       name: start,
-      kills: []
+      kills: [],
+      security: map.GetSystem({id: startSystem.ID}).security
     }];
     shortestPreRoute.forEach((systemid) => {
+      var sysObj = map.GetSystem({id: systemid});
       composedRoute.push({
         id: systemid,
-        name: map.GetSystem({id: systemid}).name,
-        kills: []
+        name: sysObj.name,
+        kills: [],
+        security: sysObj.security
       });
     });
     composedRoute.push({
       id: theraSystem.ID,
       name: theraSystem.name,
-      kills: []
+      kills: [],
+      inSig: closestEntryInfo.wormholeDestinationSignatureId,
+      outSig: closestExitInfo.signatureId
     });
     composedRoute.push({
-      id: closestPostConnection.id,
-      name: closestPostConnection.name,
-      kills: []
+      id: closestExitInfo.destinationSolarSystem.id,
+      name: closestExitInfo.destinationSolarSystem.name,
+      kills: [],
+      security: map.GetSystem({id: closestExitInfo.destinationSolarSystem.id}).security
     });
     shortestPostRoute.forEach((systemid) => {
+      var sysObj = map.GetSystem({id: systemid});
       composedRoute.push({
         id: systemid,
-        name: map.GetSystem({id: systemid}).name,
-        kills: []
+        name: sysObj.name,
+        kills: [],
+        security: sysObj.security
       });
     });
 
@@ -149,9 +157,24 @@ function getJumps(evescoutjson) {
             if (completed_requests == composedRoute.length) {
               console.log('\nsuggested Thera route from ' + start + ' to ' + desto +
                 ': ' + (composedRoute.length - 1) + ' jumps | total kills in last hour: ' + totalkills)
+
+              // var lastRegion;
+              var lastSec;
               composedRoute.forEach((obj) => {
-                console.log((obj.kills.length < 1) ? obj.name :
-                  (obj.name + ' | kills: ' + obj.kills.length));
+                if (obj.name != 'Thera') {
+                  var infoStr = obj.name;
+                  var currSec = getSec(obj.security);
+                  if (currSec != lastSec) {
+                    infoStr += ' | ' + currSec
+                    lastSec = currSec;
+                  }
+                  console.log((obj.kills.length < 1) ? infoStr :
+                  (infoStr + ' | kills: ' + obj.kills.length));
+                } else {
+                  var infoStr = obj.name + ' (in sig: ' + obj.inSig + ' | out sig: ' + obj.outSig + ')';
+                  console.log((obj.kills.length < 1) ? infoStr :
+                  (infoStr + ' | kills: ' + obj.kills.length));
+                }
               });
             }
           });
@@ -165,4 +188,14 @@ function formatSystem(name) {
     return name.toUpperCase();
   }
   return name[0].toUpperCase() + name.slice(1);
+}
+
+function getSec(sec) {
+  if (sec <= 0) {
+    return 'Nullsec';
+  }
+  if (sec < 0.5) {
+    return 'Lowsec';
+  }
+  return 'Highsec';
 }

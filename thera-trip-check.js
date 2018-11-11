@@ -41,7 +41,8 @@ SDD.LoadMeta().then(function() {
 const http = require('http');
 const https = require('https');
 
-const theraSystem = {ID: 31000005, name: 'Thera'} // Object representing Thera (for code readability)
+const regionTable = require('./staticevedata/mapKSpace.json');
+const theraSystem = {ID: 31000005, name: 'Thera'}; // Object representing Thera (for code readability)
 
 const req = https.get('https://www.eve-scout.com/api/wormholes', (res) => {
   res.setEncoding('utf8');
@@ -51,7 +52,7 @@ const req = https.get('https://www.eve-scout.com/api/wormholes', (res) => {
     evescoutjson += chunk;
   });
   res.on('end', () => {
-    getJumps(evescoutjson)
+    getJumps(evescoutjson);
   });
 });
 
@@ -77,7 +78,7 @@ function getJumps(evescoutjson) {
 
   // calc shortest path from thera to each of the destos
   destos.forEach((desto) => {
-    console.log('\nchecking route to ' + desto)
+    console.log('\nchecking route to ' + desto);
     var destoSystem = map.GetSystem({name: desto});
 
     var shortestKSpaceRoute = map.Route(startSystem.ID, destoSystem.ID, [], false, false);
@@ -103,7 +104,8 @@ function getJumps(evescoutjson) {
       id: startSystem.ID,
       name: start,
       kills: [],
-      security: map.GetSystem({id: startSystem.ID}).security
+      security: map.GetSystem({id: startSystem.ID}).security,
+      regionID: map.GetSystem({id: startSystem.ID}).regionID
     }];
     shortestPreRoute.forEach((systemid) => {
       var sysObj = map.GetSystem({id: systemid});
@@ -111,7 +113,8 @@ function getJumps(evescoutjson) {
         id: systemid,
         name: sysObj.name,
         kills: [],
-        security: sysObj.security
+        security: map.GetSystem({id: startSystem.ID}).security,
+        regionID: sysObj.regionID
       });
     });
     composedRoute.push({
@@ -125,7 +128,8 @@ function getJumps(evescoutjson) {
       id: closestExitInfo.destinationSolarSystem.id,
       name: closestExitInfo.destinationSolarSystem.name,
       kills: [],
-      security: map.GetSystem({id: closestExitInfo.destinationSolarSystem.id}).security
+      security: map.GetSystem({id: closestExitInfo.destinationSolarSystem.id}).security,
+      regionID: map.GetSystem({id: closestExitInfo.destinationSolarSystem.id}).regionID
     });
     shortestPostRoute.forEach((systemid) => {
       var sysObj = map.GetSystem({id: systemid});
@@ -133,7 +137,8 @@ function getJumps(evescoutjson) {
         id: systemid,
         name: sysObj.name,
         kills: [],
-        security: sysObj.security
+        security: sysObj.security,
+        regionID: sysObj.regionID
       });
     });
 
@@ -158,22 +163,30 @@ function getJumps(evescoutjson) {
               console.log('\nsuggested Thera route from ' + start + ' to ' + desto +
                 ': ' + (composedRoute.length - 1) + ' jumps | total kills in last hour: ' + totalkills)
 
-              // var lastRegion;
               var lastSec;
+              var lastRegion;
               composedRoute.forEach((obj) => {
                 if (obj.name != 'Thera') {
                   var infoStr = obj.name;
+
                   var currSec = getSec(obj.security);
                   if (currSec != lastSec) {
-                    infoStr += ' | ' + currSec
+                    infoStr += ' | ' + currSec;
                     lastSec = currSec;
                   }
+
+                  var currRegion = regionTable.tables.mapKRegions.d[obj.regionID][0];
+                  if (currRegion != lastRegion) {
+                    infoStr += ' | ' + currRegion;
+                    lastRegion = currRegion;
+                  }
+
                   console.log((obj.kills.length < 1) ? infoStr :
                   (infoStr + ' | kills: ' + obj.kills.length));
                 } else {
                   var infoStr = obj.name + ' (in sig: ' + obj.inSig + ' | out sig: ' + obj.outSig + ')';
                   console.log((obj.kills.length < 1) ? infoStr :
-                  (infoStr + ' | kills: ' + obj.kills.length));
+                    (infoStr + ' | kills: ' + obj.kills.length));
                 }
               });
             }
